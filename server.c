@@ -1,14 +1,16 @@
 #include "server.h"
+#define BUFFER_SIZE
 
 int OpenListener()
 {   int sd;
     struct sockaddr_in addr;
 
-    sd = socket(PF_INET, SOCK_STREAM, 0);
+    sd = socket(AF_INET, SOCK_STREAM, 0);
     bzero(&addr, sizeof(addr));
     addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
     addr.sin_port = htons(443);
-    addr.sin_addr.s_addr = INADDR_ANY;
+    
     if ( bind(sd, (struct sockaddr*)&addr, sizeof(addr)) != 0 )
     {
         perror("can't bind port");
@@ -57,20 +59,25 @@ void LoadCertificates(SSL_CTX* ctx, char* CertFile, char* KeyFile)
     if ( SSL_CTX_use_certificate_file(ctx, CertFile, SSL_FILETYPE_PEM) <= 0 )
     {
         ERR_print_errors_fp(stderr);
+        //printf("tes");
         abort();
     }
     /* set the private key from KeyFile (may be the same as CertFile) */
     if ( SSL_CTX_use_PrivateKey_file(ctx, KeyFile, SSL_FILETYPE_PEM) <= 0 )
     {
         ERR_print_errors_fp(stderr);
+        //printf("tes");
         abort();
     }
     /* verify private key */
     if ( !SSL_CTX_check_private_key(ctx) )
     {
         fprintf(stderr, "Private key does not match the public certificate\n");
+        //printf("tes");
         abort();
     }
+    printf("tes");
+    
 }
 
 void ShowCerts(SSL* ssl)
@@ -116,17 +123,23 @@ void Servlet(SSL* ssl) /* Serve the connection -- threadable */
             ERR_print_errors_fp(stderr);
     }
     sd = SSL_get_fd(ssl);       /* get socket connection */
+    SSL_shutdown(ssl);
     SSL_free(ssl);         /* release SSL state */
     close(sd);          /* close connection */
 }
 
 int main()
-{   SSL_CTX *ctx;
+
+{   //SSL *ssl;
+    printf("here");
+    SSL_CTX *ctx;
     int server;
     SSL_library_init();
-
-    ctx = InitServerCTX();        /* initialize SSL */
+    ctx = InitServerCTX();  
+    
+    //ssl = SSL_new(ctx);       /* initialize SSL */
     LoadCertificates(ctx, "cert.pem", "cert.pem"); /* load certs */
+    
     server = OpenListener();    /* create server socket */
     while (1)
     {   
@@ -142,4 +155,5 @@ int main()
     }
     close(server);          /* close server socket */
     SSL_CTX_free(ctx);         /* release context */
+    return 0;
 }
