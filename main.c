@@ -1,7 +1,6 @@
 #include <stdio.h>
 
-int main()
+void print_sumn()
 {
-    printf("Hello, World!");
-    return 0;
+    printf("lole.");
 }
