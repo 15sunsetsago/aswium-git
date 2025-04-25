@@ -55,7 +55,14 @@ SSL_CTX* InitServerCTX(void)
         ERR_print_errors_fp(stderr);
         abort();
     }
-    LoadCertificates(ctx, "cert.pem", "cert.pem");
+    if(SSL_CTX_use_certificate_file(ctx,"cert.pem", SSL_FILETYPE_PEM)<=0){
+        perror("cant load certificate from file system..");
+        abort();
+    }
+    if(SSL_CTX_use_PrivateKey_file(ctx, "cert.pem", SSL_FILETYPE_PEM) <= 0){
+        perror("cant load private key from the file system");
+        abort();
+    }
     return ctx;
 }
 
@@ -145,7 +152,7 @@ int main()
     ctx = InitServerCTX();  
     
     //ssl = SSL_new(ctx);       /* initialize SSL */
-    //LoadCertificates(ctx, "cert.pem", "cert.pem"); /* load certs */
+    LoadCertificates(ctx, "cert.pem", "cert.pem"); /* load certs */
     
     server = OpenListener();    /* create server socket */
     while (1)
