@@ -8,15 +8,19 @@ int OpenListener()
     sd = socket(AF_INET, SOCK_STREAM, 0);
     bzero(&addr, sizeof(addr));
     addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    addr.sin_addr.s_addr = htons(INADDR_ANY);
     addr.sin_port = htons(443);
     
-    if ( bind(sd, (struct sockaddr*)&addr, sizeof(addr)) != 0 )
+    if(sd<0){
+        perror("socket creation problem");
+        abort();
+    }
+    if ( bind(sd, (struct sockaddr*)&addr, sizeof(addr)) < 0 )
     {
         perror("can't bind port");
         abort();
     }
-    if ( listen(sd, 10) != 0 )
+    if ( listen(sd, 10) < 0 )
     {
         perror("Can't configure listening port");
         abort();
@@ -45,11 +49,13 @@ SSL_CTX* InitServerCTX(void)
     SSL_load_error_strings();   /* load all error messages */
     method = TLS_server_method();  /* create new server-method instance */
     ctx = SSL_CTX_new(method);   /* create new context from method */
-    if ( ctx == NULL )
+    if (!ctx)
     {
+        perror("context creation problem");
         ERR_print_errors_fp(stderr);
         abort();
     }
+    LoadCertificates(ctx, "cert.pem", "cert.pem");
     return ctx;
 }
 
@@ -135,10 +141,11 @@ int main()
     SSL_CTX *ctx;
     int server;
     SSL_library_init();
+    signal(SIGPIPE, SIG_IGN);
     ctx = InitServerCTX();  
     
     //ssl = SSL_new(ctx);       /* initialize SSL */
-    LoadCertificates(ctx, "cert.pem", "cert.pem"); /* load certs */
+    //LoadCertificates(ctx, "cert.pem", "cert.pem"); /* load certs */
     
     server = OpenListener();    /* create server socket */
     while (1)
@@ -151,7 +158,10 @@ int main()
         printf("Connection: %s:%d\n",inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
         ssl = SSL_new(ctx);              /* get new SSL state with context */
         SSL_set_fd(ssl, client);      /* set connection socket to SSL state */
+        
+        
         Servlet(ssl);         /* service connection */
+        close(client);
     }
     close(server);          /* close server socket */
     SSL_CTX_free(ctx);         /* release context */
