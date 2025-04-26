@@ -144,7 +144,7 @@ void Servlet(SSL* ssl) /* Serve the connection -- threadable */
 int main()
 
 {   //SSL *ssl;
-    printf("here");
+    printf("here"); //bruh
     SSL_CTX *ctx;
     int server;
     SSL_library_init();
