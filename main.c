@@ -1,12 +1,18 @@
 #include <stdio.h>
-#include "git2.h"
+#include <git2.h>
 
 void print_sumn()
 {
     printf("lole.");
 }
 
-void get_commit_info(const git_commit* commit){
+int main()
+{
+    print_sumn();
+}
+
+void get_commit_info(const git_commit* commit)
+{
     git_libgit2_init();
     const char* commit_msg;
     const git_oid* commit_id = git_commit_id(commit);   //gets the commit id
@@ -19,8 +25,6 @@ void get_commit_info(const git_commit* commit){
     printf("COMMIT id: %s", commit_id->id);
     printf("commit msg: %s", commit_msg);
     printf("repo: %s", git_repository_path(repo));
-    
-
-
-
-}
+    printf("author: %s %s", author->name, author->email);
+    printf("commit time (ur time): %ld", our_commit_time);
+} 

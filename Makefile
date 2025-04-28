@@ -1,11 +1,8 @@
-CFLAGS = -Wall -Werror -Wpedantic -I/usr/include/openssl -I/home/vallislfc/Downloads/libgit2-1.9.0/include
-second = -lssl -lcrypto
+CFLAGS = -I/home/vallislfc/libgit2/include
+second = -L//home/vallislfc/libgit2/build -Wl,-rpath=/home/vallislfc/libgit2/build -lgit2
 
-aswium-git: main.o server.o
-	gcc $(CFLAGS) main.o server.o $(second)
+aswium: main.o
+	gcc $(CLFAGS) -o aswium main.o $(second)
 
-main.o: ./main.c
-	gcc $(CFLAGS) -c ./main.c 
-
-server.o: ./server.c 
-	gcc $(CFLAGS) -c ./server.c
+main.o: main.c
+	gcc $(CFLAGS) -c main.c $(second)
