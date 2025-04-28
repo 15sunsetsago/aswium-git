@@ -1,4 +1,4 @@
-CFLAGS = -Wall -Werror -Wpedantic -I/usr/include/openssl 
+CFLAGS = -Wall -Werror -Wpedantic -I/usr/include/openssl -I/home/vallislfc/Downloads/libgit2-1.9.0/include
 second = -lssl -lcrypto
 
 aswium-git: main.o server.o
