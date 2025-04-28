@@ -6,23 +6,7 @@ void print_sumn()
     printf("lole.");
 }
 
-int main()
-{
-    git_libgit2_init();
-    print_sumn();
-    git_repository* repo = NULL;
-    git_signature* me = NULL;
-    git_oid new_commit_id = 0;
-    git_commit* commit;
-    
-    //i dont understand
-    int error = git_signature_now(&me,"ME","example@gmail.com");
-    error = git_repository_init(&repo,"/home/vallislfc/Downloads",1);
-    error=git_commit_create(&new_commit_id, repo, "HEAD", me, me, "UTF-8","commit msg test", free,2,parents);
-    error = git_commit_lookup(&commit, repo, &new_commit_id);
-    get_commit_info(commit);
-    return error;
-}
+
 
 void get_commit_info(git_commit* commit) //should work hopefully i give up for now
 {
@@ -41,3 +25,21 @@ void get_commit_info(git_commit* commit) //should work hopefully i give up for n
     printf("author: %s %s", author->name, author->email);
     printf("commit time (ur time): %ld", our_commit_time);
 } 
+
+int main()
+{
+    git_libgit2_init();
+    print_sumn();
+    git_repository* repo = NULL;
+    git_signature* me = NULL;
+    git_oid new_commit_id = 0;
+    git_commit* commit;
+    
+    //i dont understand
+    int error = git_signature_now(&me,"ME","example@gmail.com");
+    error = git_repository_init(&repo,"/home/vallislfc/Downloads",1);
+    error=git_commit_create(&new_commit_id, repo, "HEAD", me, me, "UTF-8","commit msg test", free,2,parents);
+    error = git_commit_lookup(&commit, repo, &new_commit_id);
+    get_commit_info(commit);
+    return error;
+}
