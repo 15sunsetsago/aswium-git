@@ -23,71 +23,114 @@ git_commit* getLastCommit(git_repository* repo) {   //ik this works since copied
     return NULL;
 }
 
-int log(){
-    diffopts.pathspec.strings;
-    diffopts.pathspec.count;
-    if(diffopts.pathspec.count>0){
-        check_lg2(git_pathspec_new(&ps,&diffopts.pathspec),"Building pathspec", NULL);
-    }
-    for(;!git_revwalk_next(&old, this->walker);git_commit_free(commit)){
-        check_lg2(git_commit_lookup(&commit, this->repo, &oid),"failed to look up commit", NULL);
+//helper to print a commit obj
+static void print_commit(git_commit* commit, struct log_options* opts){
+    char buf{GIT_OID_SHA1_HEXSIZE+1};
+    int i,count;
+    const git_signature *sig;
+    const char* scan, *eol;
 
-        parents = (int)git_commit_parentcount(commit);
-        if(diffopts.pathspec.count>0){
-            int unmatched = parents;
-            if(parents ==0){
-                git_tree* tree;
-                check_lg2(git_commit_tree(&tree,commit),"get tree", NULL);
-                if(git_pathspec_match_tree(NULL, tree, GIT_PATHSPEC_NO_MATCH_ERROR,ps)!=0){
-                    unmatched =1;
-                    git_tree_free(tree);
-                }
+    git_oid_tostr(buf, sizeof(buf), git_commit_id(commit));
+
+    if(opts->show_oneline){
+        printf("%s",buf);
+    }
+    else{
+        printf("commit %s\n",buf);
+
+        if(opts->show_log_size){
+            printf("log size %d\n",(int)strlen(git_commit_message(commit)));
+        }
+
+        if((count = (int)git_commit_parentcount(commit))>1){
+            printf("Merge:");
+            for(i = 0;i<count;++i){
+                git_oid_tostr(buf, 8, git_commit_parent_id(commit, i));
+                printf(" %s", buf);
             }
+            printf("\n");
         }
-        print_commit(commit);
-        if(show_diff){
-        git_tree* a = NULL, *b =NULL;
-        git_diff* diff = NULL;
 
-        if(parents>1)continue;
-        check_lg2(git_commit_tree(&b, commit),"Get tree", NULL);
-        if(parents == 1){
-            git_commit* parent;
-            check_lg2(git_commit_parent(&parent, commit, 0),"get parent", NULL);
-            check_lg2(git_commit_tree(&a, parent), "Tree for parent", NULL);
-            git_commit_free(parent);
+        if((sig = git_commit_author(commit))!=NULL){
+            printf("Author: %s <%s>\n", sig->name, sig->email);
+            print_time(&sig->when, "Date:   ");
         }
-        check_lg2(git_diff_tree_to_tree(&diff, git_commit_owner(commit),a,b,&diffopts), "DIff commit with parent", NULL);
+        printf("\n");
+    }
+    
+    for(scan = git_commit_message(commit);scan&&*scan;){
+        for(eol = scan;*eol != '\n'; ++eol){
+            if(opts->show_oneline) printf("%.*s\n",(int)(eol-scan),scan);
+            else printf("   %.*s\n",(int)(eol-scan),scan);
+            scan = *eol ? eol +1 :NULL;
+            if(opts->show_oneline) break;
+            
+        }
+        if(!opts->show_oneline){
+            printf("\n");
         }
     }
-    return 0;
+
 }
 
-void print_commit(git_commit* commit){
-    git_commit_message(commit);
-    const git_signature* sig = git_commit_author(commit);
-    sig->name;
-    sig->email;
-    sig->when;
+static void print_time(const git_tim* intime, const char *prefix){
+    char sign, out[32];
+    struct tm *intm;
+    int offset, hours, minutes;
+    time_t t;
+
+    offset - intime->offset;
+    if(offset<0){
+        sign = '-';
+        offset = -offset;
+        
+    }
+    else{
+        sign = '+';
+    }
+
+    hours = offset/60;
+    minutes = offset %60;
+    t = (time_t)intime->time + (intime->offset*60);
+
+    intm = gmtime(&t);
+    strftime(out,sizeof(out), "%a, %b, %e %T %Y", intm);
+
+    printf("%s%s %c%02d%02d\n", prefix, out, sign, hours, minutes);
+
+
 }
 
-// void get_commit_info(git_commit* commit) //should work hopefully i give up for now
-// {
-//     git_libgit2_init();
-//     const char* commit_msg;
-//     const git_oid* commit_id = git_commit_id(commit);   //gets the commit id
-//     commit_msg = git_commit_message(commit);    //gets the commit msg
-//     const git_repository* repo = git_commit_owner(commit);    //gets the commit repo
-//     git_time_t commit_time = git_commit_time(commit);   //gets the time commited
-//     int time_zone_diff = git_commit_time_offset(commit);    //gets the time zone diff
-//     int64_t our_commit_time = commit_time - time_zone_diff;     //updates the time so it will be our time instead of the commiters time
-//     const git_signature* author = git_commit_author(commit);    //no idea how to get the stuff inside with no get functions 
-//     printf("COMMIT id: %s", commit_id->id);
-//     printf("commit msg: %s", commit_msg);
-//     printf("repo: %s", git_repository_path(repo));
-//     printf("author: %s %s", author->name, author->email);
-//     printf("commit time (ur time): %ld", our_commit_time);
-// } 
+//helper to find how many files in a commit changed from its nth parent
+static int match_with_parent(git_commit *commit, inti, git_diff_options* opts){
+    git_commit* parent;
+    git_tree *a, *b;
+    git_diff *diff;
+    int ndeltas;
+
+    check_lg2(git_commit_parent(&parent, commit, (size_t)i), "Get parent", NULL);
+    check_lg2(git_commit_tree(&a, parent), "Tree for parent", NULL);
+    check_lg2(git_commit_tree(&b, commit), "Tree for commit", NULL);
+    check_lg2(git_diff_tree_to_tree(&diff, git_commit_owner(commit), a, b,opts),"Chekcing diff between parent and commit", NULL);
+
+    ndeltas = (int)git_diff_num_deltas(diff);
+
+    git_diff_free(diff);
+    git_tree_free(a);
+    git_tree_free(b);
+    git_commit_free(parent);
+
+    return ndeltas>0;
+}
+
+//print a usage message for the program
+static void usage(const char *message, const char *arg){
+    if(message && arg)fprintf(stderr, "%s: %s\n", message, arg);
+    else if(message) fprintf(stderr, "%s\n", message);
+    fprintf(stderr, "usage: log [<options>]\n");
+    exit(1);
+    
+}
 
 int main()
 {
@@ -104,7 +147,7 @@ int main()
     error = git_repository_init(&repo,"/home/vallislfc/Downloads",1);   //open new repo
     error=git_commit_create(&new_commit_id, repo, "HEAD", me, me, "UTF-8","commit msg test", free,2,parents);
     error = git_commit_lookup(&commit, repo, &new_commit_id);
-    get_commit_info(commit);
+    int logs = log();
     git_commit_free(commit);    //frees the commit to prevent mem leak
     return error;
 }
