@@ -132,22 +132,57 @@ static void usage(const char *message, const char *arg){
     
 }
 
+int lg2_commit(git_repository* repo, int argc, char **argv){
+    const char* opt = argv[1];
+    const char* comment = argv[2];
+    int error;
+
+    git_oid commit_oid, tree_oid;
+    git_tree* tree;
+    git_index* index;
+    git_object* parent = NULL;
+    git_reference* ref = NULL;
+    git_signature* author_signature, *committer_signature;
+
+    //validate args
+    if(argc<3||strcmp(opt,"-m")!=0){
+        printf("USAGE: %s -m <comment>\n", argv[0]);
+        return -1;
+    }
+    error = git_revparse_ext(&parent, &ref, repo, "HEAD");
+    if(error == GIT_ENOTFOUND){
+        printf("HEAD not found. Creating first commit\n");
+        error =0;
+    }
+    else if(error!=0){
+        const git_error* err = git_error_last();
+        if(err)printf("ERROR %d: %s\n", err->klass,err->message);
+        else printf("ERRO %d: no detailed info\n", error);
+    }
+
+    check_lg2(git_repository_index(&index, repo), "could not open repository index", NULL);
+    check_lg2(git_index_write_tree(&tree_oid, index), "could not write tree", NULL);
+    check_lg2(git_index_write(index), "could not write index", NULL);
+
+    check_lg2(git_tree_lookup(&tree, repo, &tree_oid), "error looking up tree", NULL);
+
+    check_lg2(git_signature_default_from_env(&author_signature, &committer_signature, repo),"Error creating signature", NULL);
+
+    check_lg2(git_commit_create_v(&commid_oid, repo, "HEAD",author_signature, committer_signature, NULL, comment, tree. parent?1:0, parent), "error creating commit", NULL);
+
+    git_index_free(index);
+    git_signature_free(author_signature);
+    git_signature_free(committer_signature);
+    git_tree_free(tree);
+    git_object_free(parent);
+    git_reference_free(ref);
+    return error;
+}
+
 int main()
 {
     git_libgit2_init();
     print_sumn();
-    git_repository* repo = NULL;
-    git_signature* me = NULL;
-    git_oid new_commit_id = 0;
-    git_commit* commit;
     
-    //i dont understand how to intiate the comit with no tree and shi
-    //ts pmo
-    int error = git_signature_now(&me,"ME","example@gmail.com"); //set signature
-    error = git_repository_init(&repo,"/home/vallislfc/Downloads",1);   //open new repo
-    error=git_commit_create(&new_commit_id, repo, "HEAD", me, me, "UTF-8","commit msg test", free,2,parents);
-    error = git_commit_lookup(&commit, repo, &new_commit_id);
-    int logs = log();
-    git_commit_free(commit);    //frees the commit to prevent mem leak
-    return error;
+    return 0;
 }
